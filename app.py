@@ -111,6 +111,9 @@ if 'optimized_route_data' not in st.session_state:
 
 if 'map_url' not in st.session_state:
     st.session_state.map_url = None
+    
+if 'new_dest_input' not in st.session_state:
+    st.session_state.new_dest_input = ""
 
 try:
     api_key = st.secrets["Maps_API_KEY"]
@@ -128,12 +131,17 @@ with st.sidebar:
     )
 
     st.header("目的地リスト")
-    new_dest = st.text_input("新しい目的地を追加")
+    
+    # 目的地の手動追加
+    new_dest = st.text_input("新しい目的地を追加", key="new_dest_input", value=st.session_state.new_dest_input)
     if st.button("追加"):
         if new_dest:
             st.session_state.destinations.append(new_dest)
+            st.session_state.new_dest_input = "" # 入力欄をクリア
             st.success(f"'{new_dest}' をリストに追加しました。")
+            st.rerun()
 
+    # Excelファイルから読み込み
     uploaded_file = st.file_uploader("Excelファイルから住所を読み込む", type=["xlsx", "xls"])
     if uploaded_file:
         file_content = BytesIO(uploaded_file.getvalue())
@@ -145,7 +153,9 @@ with st.sidebar:
             else:
                 st.session_state.destinations = addresses_from_file
                 st.success(f"{len(addresses_from_file)}件の住所を読み込みました。")
+                st.rerun()
 
+    # 目的地リストの表示と削除
     if st.session_state.destinations:
         st.subheader("現在の目的地")
         for i, dest in enumerate(st.session_state.destinations):
@@ -157,6 +167,7 @@ with st.sidebar:
                     st.session_state.destinations.pop(i)
                     st.rerun()
 
+    # Excelから23件選択するUI（条件付き表示）
     if 'addresses_to_select' in st.session_state and st.session_state.addresses_to_select:
         with st.expander("読み込んだ住所から選択 (最大23件)", expanded=True):
             selected_addresses = st.multiselect(
@@ -174,6 +185,14 @@ with st.sidebar:
                     st.rerun()
                 else:
                     st.error("23件以内で選択してください。")
+
+# --- ルートクリアボタン ---
+def clear_route_data():
+    st.session_state.optimized_route_data = None
+    st.session_state.map_url = None
+    st.rerun()
+
+st.button("ルートをクリア", on_click=clear_route_data)
 
 # メインコンテンツ
 st.header("ルート計算")
@@ -206,16 +225,13 @@ if st.session_state.optimized_route_data:
             st.write(f"**{i+1}. {segment['from']}** → **{segment['to']}**")
             st.caption(f"距離: {segment['distance']} km, 時間: {segment['time']} 分")
         
-        # 従来の「ブラウザで開く」ボタン
         if st.button("🌍 新しいタブで開く"):
             webbrowser.open_new_tab(st.session_state.map_url)
 
-    # 地図の埋め込み表示
     if st.session_state.map_url:
         with col2:
             st.subheader("埋め込み地図")
             st.warning("※一部のブラウザのセキュリティ設定により、地図が表示されない場合があります。")
-            # <iframe>で地図を埋め込む
             html_code = f"""
             <iframe
               width="100%"
