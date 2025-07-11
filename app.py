@@ -138,30 +138,11 @@ except KeyError:
 with st.sidebar:
     st.header("設定")
     st.write("APIキーは安全な方法で読み込まれています。")
-    use_current_location = st.checkbox("📍 現在地を使用する")
-
-if use_current_location:
-    st.info("現在地を取得しています...")
-    html_code = """
-    <script>
-    navigator.geolocation.getCurrentPosition(
-        function(position) {
-            const coords = position.coords.latitude + "," + position.coords.longitude;
-            const streamlitInput = window.parent.document.querySelector('input[data-testid="stTextInput"]');
-            streamlitInput.value = coords;
-            streamlitInput.dispatchEvent(new Event("input", { bubbles: true }));
-        }
-    );
-    </script>
-    """
-    html(html_code)
-    start_location = st.text_input("出発地（緯度,経度）", "", key="geo_input")
-else:
     start_location = st.text_input(
-        "出発地（住所）",
-        "〒062-0912 北海道札幌市豊平区水車町６丁目３−１",
-        key="manual_input"
+        "出発地",
+        "〒062-0912 北海道札幌市豊平区水車町６丁目３−１"
     )
+
     st.header("目的地リスト")
     
     # 目的地の手動追加
@@ -264,3 +245,4 @@ if st.session_state.optimized_route_data:
             </iframe>
             """
             html(html_code, height=500)
+        
