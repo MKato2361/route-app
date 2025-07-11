@@ -115,12 +115,12 @@ if 'map_url' not in st.session_state:
 if 'new_dest_input' not in st.session_state:
     st.session_state.new_dest_input = ""
 
-# --- 新しい関数 ---
+# --- UI操作用関数 ---
 def add_destination():
     new_dest = st.session_state.new_dest_input
     if new_dest:
         st.session_state.destinations.append(new_dest)
-        st.session_state.new_dest_input = "" # 入力欄をクリア
+        st.session_state.new_dest_input = ""
         st.success(f"'{new_dest}' をリストに追加しました。")
 
 def clear_route_data():
@@ -145,11 +145,9 @@ with st.sidebar:
 
     st.header("目的地リスト")
     
-    # 目的地の手動追加
     st.text_input("新しい目的地を追加", key="new_dest_input")
     st.button("追加", on_click=add_destination)
 
-    # Excelファイルから読み込み
     uploaded_file = st.file_uploader("Excelファイルから住所を読み込む", type=["xlsx", "xls"])
     if uploaded_file:
         file_content = BytesIO(uploaded_file.getvalue())
@@ -159,12 +157,10 @@ with st.sidebar:
                 st.warning("Excelから読み込んだ住所が23件を超えています。")
                 st.session_state.addresses_to_select = addresses_from_file
             else:
-                # 修正点: リストを置き換えるのではなく、追加する
                 st.session_state.destinations.extend(addresses_from_file)
                 st.success(f"{len(addresses_from_file)}件の住所をリストに追加しました。")
                 st.rerun()
 
-    # 目的地リストの表示と削除
     if st.session_state.destinations:
         st.subheader("現在の目的地")
         for i, dest in enumerate(st.session_state.destinations):
@@ -176,7 +172,6 @@ with st.sidebar:
                     st.session_state.destinations.pop(i)
                     st.rerun()
 
-    # Excelから23件選択するUI（条件付き表示）
     if 'addresses_to_select' in st.session_state and st.session_state.addresses_to_select:
         with st.expander("読み込んだ住所から選択 (最大23件)", expanded=True):
             selected_addresses = st.multiselect(
@@ -186,15 +181,17 @@ with st.sidebar:
             if len(selected_addresses) > 23:
                 st.warning("23件までしか選択できません。")
             
-            if st.button("選択を確定"):
+            # --- 修正点: 選択を確定する際のロジックを修正 ---
+            def confirm_selection():
                 if len(selected_addresses) <= 23:
-                    # 修正点: リストを置き換えるのではなく、追加する
                     st.session_state.destinations.extend(selected_addresses)
                     st.session_state.addresses_to_select = None
                     st.success(f"{len(selected_addresses)}件の目的地を選択しました。")
-                    st.rerun()
                 else:
                     st.error("23件以内で選択してください。")
+            
+            st.button("選択を確定", on_click=confirm_selection)
+
 
 # --- ルートクリアボタン ---
 st.button("ルートをクリア", on_click=clear_route_data)
