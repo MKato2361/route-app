@@ -158,6 +158,9 @@ with st.sidebar:
             key="manual_input"
         )
 
+    st.header("目的地リスト")
+    
+    # 目的地の手動追加
     st.text_input("新しい目的地を追加", key="new_dest_input")
     st.button("追加", on_click=add_destination)
 
@@ -205,7 +208,6 @@ with st.sidebar:
                     st.rerun()
                 else:
                     st.error("23件以内で選択してください。")
-
 
 # --- メイン ---
 st.button("ルートをクリア", on_click=clear_route_data)
