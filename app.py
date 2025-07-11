@@ -158,10 +158,10 @@ with st.sidebar:
             key="manual_input"
         )
 
-    st.header("目的地リスト")
-    st.text_input("新しい目的地を追加", key="new_dest_input")
+   st.text_input("新しい目的地を追加", key="new_dest_input")
     st.button("追加", on_click=add_destination)
 
+    # Excelファイルから読み込み
     uploaded_file = st.file_uploader("Excelファイルから住所を読み込む", type=["xlsx", "xls"])
     if uploaded_file:
         file_content = BytesIO(uploaded_file.getvalue())
@@ -175,6 +175,7 @@ with st.sidebar:
                 st.success(f"{len(addresses_from_file)}件の住所を読み込みました。")
                 st.rerun()
 
+    # 目的地リストの表示と削除
     if st.session_state.destinations:
         st.subheader("現在の目的地")
         for i, dest in enumerate(st.session_state.destinations):
@@ -186,6 +187,7 @@ with st.sidebar:
                     st.session_state.destinations.pop(i)
                     st.rerun()
 
+    # Excelから23件選択するUI（条件付き表示）
     if 'addresses_to_select' in st.session_state and st.session_state.addresses_to_select:
         with st.expander("読み込んだ住所から選択 (最大23件)", expanded=True):
             selected_addresses = st.multiselect(
@@ -194,6 +196,7 @@ with st.sidebar:
             )
             if len(selected_addresses) > 23:
                 st.warning("23件までしか選択できません。")
+            
             if st.button("選択を確定"):
                 if len(selected_addresses) <= 23:
                     st.session_state.destinations = selected_addresses
@@ -202,6 +205,7 @@ with st.sidebar:
                     st.rerun()
                 else:
                     st.error("23件以内で選択してください。")
+
 
 # --- メイン ---
 st.button("ルートをクリア", on_click=clear_route_data)
