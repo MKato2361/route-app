@@ -245,5 +245,3 @@ if st.session_state.optimized_route_data:
             </iframe>
             """
             html(html_code, height=500)
-            html(html_code, height=500)
-
