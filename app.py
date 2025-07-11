@@ -3,8 +3,10 @@ import requests
 import openpyxl
 import webbrowser
 from io import BytesIO
+import base64
+from streamlit.components.v1 import html
 
-# --- 修正版のコアロジックを再利用 ---
+# --- コアロジック関数群（変更なし） ---
 def open_in_Maps(origin, optimized_segments):
     """最適化されたルートをブラウザで開く"""
     if not optimized_segments:
@@ -19,13 +21,13 @@ def open_in_Maps(origin, optimized_segments):
     final_destination_encoded = requests.utils.quote(final_destination)
     
     url = (
-        "https://www.google.com/maps/dir/?"
-        f"api=1&origin={origin_encoded}&"
+        "https://www.google.com/maps/embed/v1/directions?"
+        f"key={st.secrets['Maps_API_KEY']}&"
+        f"origin={origin_encoded}&"
         f"destination={final_destination_encoded}&"
-        f"waypoints={waypoints_encoded}&"
-        "travelmode=driving"
+        f"waypoints={waypoints_encoded}"
     )
-    webbrowser.open(url)
+    return url
 
 def read_addresses_from_excel(file_content):
     """Excelファイルから住所を読み込む"""
@@ -107,14 +109,16 @@ if 'destinations' not in st.session_state:
 if 'optimized_route_data' not in st.session_state:
     st.session_state.optimized_route_data = None
 
-# --- UIコンポーネント ---
-# 左サイドバーの入力
+if 'map_url' not in st.session_state:
+    st.session_state.map_url = None
+
 try:
     api_key = st.secrets["Maps_API_KEY"]
 except KeyError:
-    st.error("APIキーが設定されていません。サイドバーの「設定」から設定してください。")
-    st.stop() # アプリの実行を停止
+    st.error("APIキーが設定されていません。")
+    st.stop()
 
+# --- UIコンポーネント ---
 with st.sidebar:
     st.header("設定")
     st.write("APIキーは安全な方法で読み込まれています。")
@@ -122,15 +126,14 @@ with st.sidebar:
         "出発地",
         "〒062-0912 北海道札幌市豊平区水車町６丁目３−１"
     )
-    
-    # 目的地の手動追加
+
+    st.header("目的地リスト")
     new_dest = st.text_input("新しい目的地を追加")
     if st.button("追加"):
         if new_dest:
             st.session_state.destinations.append(new_dest)
             st.success(f"'{new_dest}' をリストに追加しました。")
 
-    # Excelファイルから読み込み
     uploaded_file = st.file_uploader("Excelファイルから住所を読み込む", type=["xlsx", "xls"])
     if uploaded_file:
         file_content = BytesIO(uploaded_file.getvalue())
@@ -143,7 +146,6 @@ with st.sidebar:
                 st.session_state.destinations = addresses_from_file
                 st.success(f"{len(addresses_from_file)}件の住所を読み込みました。")
 
-    # 目的地リストの表示と削除
     if st.session_state.destinations:
         st.subheader("現在の目的地")
         for i, dest in enumerate(st.session_state.destinations):
@@ -155,7 +157,6 @@ with st.sidebar:
                     st.session_state.destinations.pop(i)
                     st.rerun()
 
-    # Excelから23件選択するUI（条件付き表示）
     if 'addresses_to_select' in st.session_state and st.session_state.addresses_to_select:
         with st.expander("読み込んだ住所から選択 (最大23件)", expanded=True):
             selected_addresses = st.multiselect(
@@ -178,8 +179,8 @@ with st.sidebar:
 st.header("ルート計算")
 
 if st.button("🚗 ルート最適化"):
-    if not api_key or not start_location or not st.session_state.destinations:
-        st.error("APIキー、出発地、目的地をすべて入力してください。")
+    if not start_location or not st.session_state.destinations:
+        st.error("出発地、目的地をすべて入力してください。")
     else:
         with st.spinner("ルートを最適化中..."):
             route_data = get_optimized_route_data(api_key, start_location, st.session_state.destinations)
@@ -187,30 +188,41 @@ if st.button("🚗 ルート最適化"):
         
         if st.session_state.optimized_route_data:
             st.success("✅ ルート最適化が完了しました。")
+            st.session_state.map_url = open_in_Maps(start_location, st.session_state.optimized_route_data['segments'])
             st.rerun()
 
 # 結果表示
 if st.session_state.optimized_route_data:
     info = st.session_state.optimized_route_data
     
-    st.subheader("最適化されたルート概要")
     col1, col2 = st.columns(2)
     with col1:
+        st.subheader("最適化されたルート概要")
         st.metric("総走行距離", f"{info['total_distance']} km")
-    with col2:
         st.metric("総運転時間", f"{info['total_time']} 分")
+        st.markdown("---")
+        st.subheader("ルート詳細")
+        for i, segment in enumerate(info['segments']):
+            st.write(f"**{i+1}. {segment['from']}** → **{segment['to']}**")
+            st.caption(f"距離: {segment['distance']} km, 時間: {segment['time']} 分")
+        
+        # 従来の「ブラウザで開く」ボタン
+        if st.button("🌍 新しいタブで開く"):
+            webbrowser.open_new_tab(st.session_state.map_url)
 
-    st.subheader("ルート詳細")
-    for i, segment in enumerate(info['segments']):
-        st.write(f"**{i+1}. {segment['from']}** → **{segment['to']}**")
-        st.caption(f"距離: {segment['distance']} km, 時間: {segment['time']} 分")
-
-    st.markdown("---")
-    st.markdown("※ブラウザで開く機能は、Streamlit Cloudなどの環境では動作しません。")
-
-    # ブラウザで開くボタン
-    if st.button("🌍 ブラウザで開く"):
-        open_in_Maps(
-            st.session_state.optimized_route_data['segments'][0]['from'], 
-            st.session_state.optimized_route_data['segments']
-        )
+    # 地図の埋め込み表示
+    if st.session_state.map_url:
+        with col2:
+            st.subheader("埋め込み地図")
+            st.warning("※一部のブラウザのセキュリティ設定により、地図が表示されない場合があります。")
+            # <iframe>で地図を埋め込む
+            html_code = f"""
+            <iframe
+              width="100%"
+              height="500"
+              frameborder="0" style="border:0"
+              src="{st.session_state.map_url}"
+              allowfullscreen>
+            </iframe>
+            """
+            html(html_code, height=500)
