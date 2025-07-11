@@ -158,7 +158,7 @@ with st.sidebar:
             key="manual_input"
         )
 
-   st.text_input("新しい目的地を追加", key="new_dest_input")
+    st.text_input("新しい目的地を追加", key="new_dest_input")
     st.button("追加", on_click=add_destination)
 
     # Excelファイルから読み込み
