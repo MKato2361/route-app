@@ -112,8 +112,20 @@ if 'optimized_route_data' not in st.session_state:
 if 'map_url' not in st.session_state:
     st.session_state.map_url = None
     
-if 'new_dest_input' not in st.session_state:
-    st.session_state.new_dest_input = ""
+# --- 新しい関数 ---
+def add_destination():
+    new_dest = st.session_state.new_dest_input
+    if new_dest:
+        st.session_state.destinations.append(new_dest)
+        st.session_state.new_dest_input = "" # 入力欄をクリア
+        st.success(f"'{new_dest}' をリストに追加しました。")
+        st.rerun()
+
+def clear_route_data():
+    st.session_state.destinations = []
+    st.session_state.optimized_route_data = None
+    st.session_state.map_url = None
+    st.rerun()
 
 try:
     api_key = st.secrets["Maps_API_KEY"]
@@ -133,13 +145,8 @@ with st.sidebar:
     st.header("目的地リスト")
     
     # 目的地の手動追加
-    new_dest = st.text_input("新しい目的地を追加", key="new_dest_input", value=st.session_state.new_dest_input)
-    if st.button("追加"):
-        if new_dest:
-            st.session_state.destinations.append(new_dest)
-            st.session_state.new_dest_input = "" # 入力欄をクリア
-            st.success(f"'{new_dest}' をリストに追加しました。")
-            st.rerun()
+    st.text_input("新しい目的地を追加", key="new_dest_input")
+    st.button("追加", on_click=add_destination)
 
     # Excelファイルから読み込み
     uploaded_file = st.file_uploader("Excelファイルから住所を読み込む", type=["xlsx", "xls"])
@@ -187,11 +194,6 @@ with st.sidebar:
                     st.error("23件以内で選択してください。")
 
 # --- ルートクリアボタン ---
-def clear_route_data():
-    st.session_state.optimized_route_data = None
-    st.session_state.map_url = None
-    st.rerun()
-
 st.button("ルートをクリア", on_click=clear_route_data)
 
 # メインコンテンツ
