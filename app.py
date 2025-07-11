@@ -3,9 +3,10 @@ import requests
 import openpyxl
 import webbrowser
 from io import BytesIO
+import base64
 from streamlit.components.v1 import html
 
-# --- コアロジック関数群 ---
+# --- コアロジック関数群（変更なし） ---
 def open_in_Maps(origin, optimized_segments):
     """最適化されたルートをブラウザで開く"""
     if not optimized_segments:
@@ -102,16 +103,24 @@ st.title("Google Maps ルート最適化")
 st.markdown("Google Maps Directions APIを使って、複数の目的地を巡回する最適なルートを計算します。")
 
 # --- セッションステートの初期化 ---
-for key in ['destinations', 'optimized_route_data', 'map_url', 'new_dest_input']:
-    if key not in st.session_state:
-        st.session_state[key] = [] if 'destinations' in key else None if 'route' in key or 'map_url' in key else ""
+if 'destinations' not in st.session_state:
+    st.session_state.destinations = []
 
-# --- 関数 ---
+if 'optimized_route_data' not in st.session_state:
+    st.session_state.optimized_route_data = None
+
+if 'map_url' not in st.session_state:
+    st.session_state.map_url = None
+    
+if 'new_dest_input' not in st.session_state:
+    st.session_state.new_dest_input = ""
+
+# --- 新しい関数 ---
 def add_destination():
     new_dest = st.session_state.new_dest_input
     if new_dest:
         st.session_state.destinations.append(new_dest)
-        st.session_state.new_dest_input = ""
+        st.session_state.new_dest_input = "" # 入力欄をクリア
         st.success(f"'{new_dest}' をリストに追加しました。")
 
 def clear_route_data():
@@ -119,44 +128,20 @@ def clear_route_data():
     st.session_state.optimized_route_data = None
     st.session_state.map_url = None
 
-# --- APIキー ---
 try:
     api_key = st.secrets["Maps_API_KEY"]
 except KeyError:
     st.error("APIキーが設定されていません。")
     st.stop()
 
-# --- UI: サイドバー ---
+# --- UIコンポーネント ---
 with st.sidebar:
     st.header("設定")
     st.write("APIキーは安全な方法で読み込まれています。")
-
-    use_current_location = st.checkbox("📍 現在地を使用する")
-
-    if use_current_location:
-        st.info("現在地を取得しています...")
-        html_code = """
-        <script>
-        navigator.geolocation.getCurrentPosition(
-            function(position) {
-                const coords = position.coords.latitude + "," + position.coords.longitude;
-                const input = window.parent.document.querySelector('input[data-testid="stTextInput"]');
-                if (input) {
-                    input.value = coords;
-                    input.dispatchEvent(new Event("input", { bubbles: true }));
-                }
-            }
-        );
-        </script>
-        """
-        html(html_code)
-        start_location = st.text_input("出発地（緯度,経度）", "", key="geo_input")
-    else:
-        start_location = st.text_input(
-            "出発地（住所）",
-            "〒062-0912 北海道札幌市豊平区水車町６丁目３−１",
-            key="manual_input"
-        )
+    start_location = st.text_input(
+        "出発地",
+        "〒062-0912 北海道札幌市豊平区水車町６丁目３−１"
+    )
 
     st.header("目的地リスト")
     
@@ -209,8 +194,10 @@ with st.sidebar:
                 else:
                     st.error("23件以内で選択してください。")
 
-# --- メイン ---
+# --- ルートクリアボタン ---
 st.button("ルートをクリア", on_click=clear_route_data)
+
+# メインコンテンツ
 st.header("ルート計算")
 
 if st.button("🚗 ルート最適化"):
@@ -226,10 +213,11 @@ if st.button("🚗 ルート最適化"):
             st.session_state.map_url = open_in_Maps(start_location, st.session_state.optimized_route_data['segments'])
             st.rerun()
 
+# 結果表示
 if st.session_state.optimized_route_data:
     info = st.session_state.optimized_route_data
+    
     col1, col2 = st.columns(2)
-
     with col1:
         st.subheader("最適化されたルート概要")
         st.metric("総走行距離", f"{info['total_distance']} km")
@@ -239,6 +227,7 @@ if st.session_state.optimized_route_data:
         for i, segment in enumerate(info['segments']):
             st.write(f"**{i+1}. {segment['from']}** → **{segment['to']}**")
             st.caption(f"距離: {segment['distance']} km, 時間: {segment['time']} 分")
+        
         if st.button("🌍 新しいタブで開く"):
             webbrowser.open_new_tab(st.session_state.map_url)
 
@@ -255,5 +244,6 @@ if st.session_state.optimized_route_data:
               allowfullscreen>
             </iframe>
             """
+            html(html_code, height=500)
             html(html_code, height=500)
 
