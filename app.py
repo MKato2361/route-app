@@ -112,6 +112,9 @@ if 'optimized_route_data' not in st.session_state:
 if 'map_url' not in st.session_state:
     st.session_state.map_url = None
     
+if 'new_dest_input' not in st.session_state:
+    st.session_state.new_dest_input = ""
+
 # --- 新しい関数 ---
 def add_destination():
     new_dest = st.session_state.new_dest_input
@@ -119,13 +122,11 @@ def add_destination():
         st.session_state.destinations.append(new_dest)
         st.session_state.new_dest_input = "" # 入力欄をクリア
         st.success(f"'{new_dest}' をリストに追加しました。")
-        st.rerun()
 
 def clear_route_data():
     st.session_state.destinations = []
     st.session_state.optimized_route_data = None
     st.session_state.map_url = None
-    st.rerun()
 
 try:
     api_key = st.secrets["Maps_API_KEY"]
