@@ -159,8 +159,9 @@ with st.sidebar:
                 st.warning("Excelから読み込んだ住所が23件を超えています。")
                 st.session_state.addresses_to_select = addresses_from_file
             else:
-                st.session_state.destinations = addresses_from_file
-                st.success(f"{len(addresses_from_file)}件の住所を読み込みました。")
+                # 修正点: リストを置き換えるのではなく、追加する
+                st.session_state.destinations.extend(addresses_from_file)
+                st.success(f"{len(addresses_from_file)}件の住所をリストに追加しました。")
                 st.rerun()
 
     # 目的地リストの表示と削除
@@ -187,7 +188,8 @@ with st.sidebar:
             
             if st.button("選択を確定"):
                 if len(selected_addresses) <= 23:
-                    st.session_state.destinations = selected_addresses
+                    # 修正点: リストを置き換えるのではなく、追加する
+                    st.session_state.destinations.extend(selected_addresses)
                     st.session_state.addresses_to_select = None
                     st.success(f"{len(selected_addresses)}件の目的地を選択しました。")
                     st.rerun()
