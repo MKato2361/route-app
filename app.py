@@ -156,8 +156,12 @@ if use_current_location:
     """
     html(html_code)
     start_location = st.text_input("出発地（緯度,経度）", "", key="geo_input")
-
-
+else:
+    start_location = st.text_input(
+        "出発地（住所）",
+        "〒062-0912 北海道札幌市豊平区水車町６丁目３−１",
+        key="manual_input"
+    )
     st.header("目的地リスト")
     
     # 目的地の手動追加
